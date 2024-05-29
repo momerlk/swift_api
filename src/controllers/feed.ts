@@ -1,6 +1,10 @@
 import Action from "../models/actions"
 import uws from "uWebSockets.js"
 import Product from "../models/product"
+import user from "../models/user";
+import jwt from "jsonwebtoken"
+import {v4 as uuid} from "uuid";
+
 
 // params : n -> number of recommendations to make
 export async function recommend(n : number){
@@ -41,9 +45,27 @@ export default async function handle_feed(port : number){
         try  {
             const message_string = Buffer.from(client_message).toString();
             const message = JSON.parse(message_string);
+            let user_id = ""
 
+            // TODO : Get Actual Secret Key from centralised system
+            jwt.verify(message.token, 'my-secret-key', (err : any, user : any) => {
+                if (err) {
+                    return ws.send(JSON.stringify(({ message: 'Invalid token' })));
+                }
+                user_id = user.user_id;
+            });
 
-            const action = new Action(message);
+            const data = {
+                user_id : user_id,
+                action_type : message.action_type,
+                product_id : message.product_id, 
+                action_id : uuid(),
+                action_timestamp : (new Date()).toDateString(),
+            }
+
+            console.log(`data = ${data}`)
+
+            const action = new Action(data);
             await action.save();
             
             const products = await recommend(1);
