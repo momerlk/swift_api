@@ -58,4 +58,5 @@ router.post('/signin', (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(500).json({ message: error.message });
     }
 }));
+// TODO : Add /refresh route to prevent expiration of tokens
 exports.default = router;

@@ -46,6 +46,9 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     required : true,
   },
+  rating : {
+    impressions : {type : Number},
+  },
   meta_tags: {
     categories: [{ type: String }],
     tags: [{ type: String }],
