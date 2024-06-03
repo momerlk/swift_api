@@ -55,6 +55,7 @@ def generate_prompt(data : str) -> str :
         meta_tags: {
             categories: { categories inferred from description },
             garment_type: { type of garment },
+            fabric : {type of fabric of the product if product is a cloth inferred from description},
             style: { style of the product },
             keywords: { keywords for recommendation }
         },
@@ -71,8 +72,8 @@ def generate_prompt(data : str) -> str :
     Using the schema "{schema}", convert this data "{data}" into Product objects.
     1. Extract "age_range", "gender", "interests", "price_range", "user_type" from "description", "title", "handle".
     2. Generate "categories" from "description".
-    3. Infer "garment_type", "style", "keywords" for recommendations.
-    4. Infer product type and category and generate data for "category" and "product_type" fields according to schema.
+    3. Infer "garment_type", "style", "keywords", "fabric" for recommendations from the given data.
+    4. Infer product type and category and generate data for "category" and "product_type" fields according to schema. make sure these fields don't have punctuation or spaces.
     5. You may modify the description to be more readable and user friendly.
     6. Carefully interpret the instructions and descriptions in the schema.
     7. Convert "options" field from a nested document to a flattened json object.
@@ -88,7 +89,7 @@ import time
 def extract_info(data):
     prompt = generate_prompt(f"{data}")
     for item in data : 
-        print(f"handle = {item["handle"]}")
+        print(f"handle = {item["handle"]}, vendor = {item["vendor"]}")
     response = None
     retries = 0
     limit = 5
@@ -257,7 +258,7 @@ def process_batch(batch, last_request_time, requests_in_last_minute, total_reque
 # TODO : MAKE THE PROMPT SIZE MUCH MUCH MUCH MUCH SMALLER, current size is almost 2800 words
 
 def main(total_requests):
-    batch_size = 1
+    batch_size = 4
 
     last_request_time = 0
     requests_in_last_minute = []
