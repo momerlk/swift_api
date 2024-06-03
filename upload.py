@@ -8,7 +8,14 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from bs4 import BeautifulSoup
 import uuid
+import pprint
 
+def remove_unicode_codes(string):
+    # Regex pattern to match Unicode escape sequences
+    unicode_code_pattern = r'\\u[0-9a-fA-F]{6}'
+    # Substitute the Unicode escape sequences with an empty string
+    cleaned_string = re.sub(unicode_code_pattern, '', string)
+    return cleaned_string
 
 def preprocess_text(text):
     # Remove HTML tags
@@ -17,27 +24,9 @@ def preprocess_text(text):
     except Exception  as e :
         print(f"failed to preprocess html data, error = {e}")
 
-    # Convert to lowercase
-    text = text.lower()
+    text = remove_unicode_codes(text)
 
-    # Remove special characters and digits
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
-
-    # Tokenization
-    tokens = word_tokenize(text)
-
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
-    tokens = [word for word in tokens if word not in stop_words]
-
-    # Lemmatization
-    lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens]
-
-    # Join tokens back into a string
-    preprocessed_text = ' '.join(tokens)
-
-    return preprocessed_text
+    return text
 
 # MongoDB connection details
 local_db_server = "mongodb://localhost:27017/"
@@ -137,19 +126,20 @@ def extract_fields(json_data , fname):
         "shopify_id" : json_data.get("id"),
 
         'handle' : json_data.get("handle"),
-        'title': json_data.get('title'),
+        'title': json_data.get('title').replace("-" , " ").replace("_" , " ").title(),
         "vendor" : vendor,
+        "vendor_title" : vendor.replace("_" , " ").title(),
         "category" : "",
+        "product_type" : json_data.get("product_type"),
 
         "image_url" : image_url,
         "description" : description, 
-        "body_html" : json_data.get("body_html"),
 
         "price" : price,
         "currency" : "PKR",
 
         "options" : json_data.get("options"),
-        "tags" : [],
+        "tags" : json_data.get("tags"),
         "available" : True,
     }
 

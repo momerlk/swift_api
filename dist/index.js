@@ -13,7 +13,9 @@ const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)());
-const url = 'mongodb+srv://swift:swift@hobby.nzyzrid.mongodb.net/swift';
+const atlas_url = "mongodb+srv://swift:swift@hobby.nzyzrid.mongodb.net/swift";
+const local_url = "mongodb://localhost:27017/swift";
+const url = atlas_url;
 // Connect to MongoDB
 mongoose_1.default.connect(url)
     .then(() => console.log('MongoDB Connected'))

@@ -22,6 +22,7 @@ const history_1 = __importDefault(require("../models/history"));
 // params : n -> number of recommendations to make
 function recommend(n) {
     return __awaiter(this, void 0, void 0, function* () {
+        // TODO : may recommend duplicate products take user history into account
         try {
             const products = yield product_1.default.aggregate([{ $sample: { size: n } }]);
             return products;
@@ -140,6 +141,8 @@ function handle_feed(port) {
                         }
                     }
                     // PRODUCTS FOR SWIPES START
+                    // TODO : add proper timestamp
+                    // TODO : Sometimes doesn't update user_history index and recommends same product twice fix that.
                     // This is for all swiping actions
                     const data = {
                         user_id: user_id,
@@ -187,13 +190,13 @@ function handle_feed(port) {
                             const product = yield product_1.default.findOne({ product_id: product_ids[i] });
                             products.push(product);
                         }
+                        // update user history 
+                        yield history_1.default.findOneAndUpdate({ user_id: user_id }, user_history);
                         console.log(`ACTION : user.history.index = ${user_history.index}`);
                         console.log(`ACTION : products length = ${products.length}`);
                         console.log(`ACTION : total products length = ${product_ids.length}`);
                         console.log(`ACTION : title of the first product = ${(_c = (products === null || products === void 0 ? void 0 : products[0])) === null || _c === void 0 ? void 0 : _c["title"]}`);
                         console.log(`ACTION : vendor of the first product = ${(_d = products === null || products === void 0 ? void 0 : products[0]) === null || _d === void 0 ? void 0 : _d["vendor"]}`);
-                        // update user history 
-                        yield history_1.default.findOneAndUpdate({ user_id: user_id }, user_history);
                         ws.send(JSON.stringify({
                             status: 200,
                             message: `2 more products recommended`,

@@ -9,6 +9,7 @@ import History from "../models/history"
 
 // params : n -> number of recommendations to make
 export async function recommend(n : number){
+    // TODO : may recommend duplicate products take user history into account
     try {
         const products = await Product.aggregate([{ $sample: { size: n } }]);
         return products;
@@ -206,15 +207,15 @@ export default async function handle_feed(port : number){
                     const product = await Product.findOne({product_id : product_ids[i]})
                     products.push(product);
                 }
-                
+
+                // update user history 
+                await History.findOneAndUpdate({user_id : user_id} , user_history)
+
                 console.log(`ACTION : user.history.index = ${user_history!.index}`)
                 console.log(`ACTION : products length = ${products.length}`)
                 console.log(`ACTION : total products length = ${product_ids.length}`)
                 console.log(`ACTION : title of the first product = ${(products?.[0])?.["title"]}`)
                 console.log(`ACTION : vendor of the first product = ${products?.[0]?.["vendor"]}`)
-               
-                // update user history 
-                await History.findOneAndUpdate({user_id : user_id} , user_history)
 
                 ws.send(JSON.stringify({
                     status : 200,
