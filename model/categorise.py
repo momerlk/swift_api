@@ -18,23 +18,18 @@ genai.configure(api_key="AIzaSyD75qFy_cprb1j8W_AxDBzAtsBQnWFH2Vc")
 
 # Create the model with appropriate configurations
 generation_config = {
-    "temperature": 1,
+    "temperature": 0.9,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
+    "max_output_tokens": 40000,
     "stop_sequences": ["Explanation"],
-    "response_mime_type": "application/json",
+    "response_mime_type": "text/plain",
+
 }
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-]
+
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
-    safety_settings=safety_settings,
     generation_config=generation_config,
 )
 
@@ -84,7 +79,6 @@ def generate_prompt(data : str) -> str :
     output format is JSON, no javascript or any coding or any other comments.
     """
 
-
     return prompt
 
 
@@ -95,16 +89,20 @@ def extract_info(data):
     for item in data : 
         print(f"handle = {item["handle"]}")
     response = None
+    retries = 0
+    limit = 5
     while True : 
         error = False
         try : 
             response = chat_session.send_message(prompt)
-        except Exception as e : 
+        except Exception as e :
+            print(f"response error = {e}") 
             error = True
 
-        if error == False : 
+        if error == False or retries >= limit  : 
             break
         else : 
+            retries += 1
             print(f"could not get response trying again after 30 seconds ...")
             time.sleep(30)
 
@@ -179,18 +177,29 @@ def process_batch(batch, last_request_time, requests_in_last_minute, total_reque
     total_requests += len(batch)
     # Extract information from descriptions
     response = extract_info(products_list)
+    if response == None : 
+        return last_request_time, requests_in_last_minute , total_requests
     text = response.text.encode().decode('unicode_escape')
+    text = text.replace("```json", "").replace("```" , "")
+    data_list = None
     try : 
         data_list = json.loads(text)
     except Exception as e : 
-        print(f"could not decode response, error = {e}, trying fixed_json")
+        print(f"could not decode response, error = {e}, trying fixed_json ...")
+        print(f"response = {response.text}")
         fixed_text = fix_json_errors(text)
+        data_list = None
         try : 
             data_list = json.loads(fixed_text)
         except Exception as e2 : 
-            print(f"could not decode response, error = {e}, trying fixed_json")
+            print(f"could not decode response, error = {e}.")
             return last_request_time, requests_in_last_minute , total_requests
-    
+        if data_list == None : 
+            print("error in code. data_list is none yet not returned from function")
+
+    for idx,data in enumerate(data_list):
+        data_list[idx]["product_type"] = data["product_type"].lower()
+        data_list[idx]["category"] = data["category"].lower()
     
     new_documents = []
 
