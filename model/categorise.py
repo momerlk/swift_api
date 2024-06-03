@@ -39,9 +39,10 @@ def generate_prompt(data : str) -> str :
     schema = """{
         product_id: { id of the product, unique },
         product_type : {type of the product e.g "womens_clothing", "kids_clothing", "mens_clothing"},
-        category : {broad category of the product e.g "clothes", "shoes", "accessories"}
+        category : {broad category of the product e.g "clothes", "shoes", "accessories"},
         product_url: { URL of the product page, unique },
-        options : {options of the product like examples given sizes, colours, etc.},
+        image_url : {image url of the product },
+        options : {options of the product like examples given sizes, colours, etc. make it a single JSON Object unnested},
         shopify_id: { Shopify ID },
         handle: { product handle },
         title: { product title },
@@ -72,9 +73,9 @@ def generate_prompt(data : str) -> str :
     2. Generate "categories" from "description".
     3. Infer "garment_type", "style", "keywords" for recommendations.
     4. Infer product type and category and generate data for "category" and "product_type" fields according to schema.
-    5. In the Description add newline characters where appropriate denoted by "/newline" not escape sequences.
-    6. You may modify the description to be more readable and user friendly.
-    7. Carefully interpret the instructions and descriptions in the schema.
+    5. You may modify the description to be more readable and user friendly.
+    6. Carefully interpret the instructions and descriptions in the schema.
+    7. Convert "options" field from a nested document to a flattened json object.
     Ensure data is structured, concise, and suitable for programmatic use. Your(Gemini's) 
     output format is JSON, no javascript or any coding or any other comments.
     """
@@ -168,6 +169,32 @@ def fix_json_errors(json_string):
     
     return sanitized_json_string
 
+def get_description(text : str):
+
+    # after description
+    desc_idx = text.find("description")
+    if desc_idx == -1 :
+        return None, None, None, None
+    after_desc = text[desc_idx:len(text)]
+
+    # after colon
+    colon_idx = after_desc.find(':')
+    after_colon = after_desc[colon_idx+1:len(after_desc)] # text after colon
+
+    #after quotes
+    first_quote_idx = after_colon.find('"')
+    after_first_quote = after_colon[first_quote_idx+1:len(after_colon)]
+
+    last_quote_idx = after_first_quote.find('"')
+
+    res = after_first_quote[0:last_quote_idx]
+
+    start = desc_idx + colon_idx+1 + first_quote_idx+1
+    end = desc_idx + colon_idx+1 + first_quote_idx+1 + last_quote_idx
+
+    return res , start , end , text[end:len(text)]
+
+
 def process_batch(batch, last_request_time, requests_in_last_minute, total_requests):
     products_list = batch
 
@@ -181,21 +208,23 @@ def process_batch(batch, last_request_time, requests_in_last_minute, total_reque
         return last_request_time, requests_in_last_minute , total_requests
     text = response.text.encode().decode('unicode_escape')
     text = text.replace("```json", "").replace("```" , "")
+
+
+    res, start , end , r_t = get_description(text)
+    while res != None : 
+        res2 = re.sub(r'(?<!\\)\n', '|/newline|', res)
+        text = text.replace(res , res2)
+        res, start , end , r_t = get_description(r_t)
+
+
+    text = re.sub(r'(?<!\\)\n', '', text)
     data_list = None
     try : 
         data_list = json.loads(text)
     except Exception as e : 
-        print(f"could not decode response, error = {e}, trying fixed_json ...")
-        print(f"response = {response.text}")
-        fixed_text = fix_json_errors(text)
-        data_list = None
-        try : 
-            data_list = json.loads(fixed_text)
-        except Exception as e2 : 
-            print(f"could not decode response, error = {e}.")
-            return last_request_time, requests_in_last_minute , total_requests
-        if data_list == None : 
-            print("error in code. data_list is none yet not returned from function")
+        print(f"could not decode response, error = {e}")
+        print(f"response = {text}")
+        return last_request_time, requests_in_last_minute , total_requests
 
     for idx,data in enumerate(data_list):
         data_list[idx]["product_type"] = data["product_type"].lower()
@@ -210,6 +239,8 @@ def process_batch(batch, last_request_time, requests_in_last_minute, total_reque
             del data["_id"]
         except Exception as e : 
             e = None 
+
+        data["description"] = data["description"].replace("|/newline|" , "\n")
         
         new_documents.append(data)
 
@@ -226,13 +257,14 @@ def process_batch(batch, last_request_time, requests_in_last_minute, total_reque
 # TODO : MAKE THE PROMPT SIZE MUCH MUCH MUCH MUCH SMALLER, current size is almost 2800 words
 
 def main(total_requests):
-    batch_size = 2
+    batch_size = 1
 
     last_request_time = 0
     requests_in_last_minute = []
 
     print(f"total requests = {total_requests}")
 
+    # TODO : sometimes a smaller batch size works and doesn't give any errors. Implement functionality
     while True:
         cursor = collection.find(query).sort("_id").skip(total_requests).limit(batch_size)
         products_list = list(cursor)
