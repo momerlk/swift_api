@@ -34,15 +34,23 @@ function recommend(n) {
     });
 }
 exports.recommend = recommend;
+const send = (ws, data) => {
+    try {
+        ws.send(data);
+    }
+    catch (e) {
+        console.log(`failed to send data to websocket, err = ${e}`);
+    }
+};
 function handle_feed(port) {
     return __awaiter(this, void 0, void 0, function* () {
         const app = uWebSockets_js_1.default.App().ws('/feed', {
             /* There are many common helper features */
             idleTimeout: 32,
             maxBackpressure: 1024,
-            maxPayloadLength: 512,
+            maxPayloadLength: 1024,
             open: (ws) => __awaiter(this, void 0, void 0, function* () {
-                ws.send(JSON.stringify({
+                send(ws, JSON.stringify({
                     status: 200,
                     message: `Real-time feed connection established`
                 }));
@@ -57,7 +65,7 @@ function handle_feed(port) {
                     // TODO : Create a error logger system which logs errors that users face
                     jsonwebtoken_1.default.verify(message.token, 'my-secret-key', (err, user) => {
                         if (err) {
-                            return ws.send(JSON.stringify(({ message: 'Invalid token' })));
+                            return send(ws, JSON.stringify(({ message: 'Invalid token' })));
                         }
                         user_id = user.user_id;
                     });
@@ -69,7 +77,7 @@ function handle_feed(port) {
                         if (user_history === null) {
                             const rec_products = yield recommend(4); // cold start
                             if (rec_products === null) {
-                                ws.send(JSON.stringify({ status: 500, message: `Failed to recommend products` }));
+                                send(ws, JSON.stringify({ status: 500, message: `Failed to recommend products` }));
                             }
                             let product_ids = [];
                             for (let i = 0; i < rec_products.length; i++) {
@@ -86,7 +94,7 @@ function handle_feed(port) {
                             console.log(`OPEN WITHOUT HISTORY : title of the first product = ${rec_products[0]["title"]}`);
                             console.log(`OPEN WITHOUT HISTORY : vendor of the first product = ${rec_products[0]["vendor"]}`);
                             yield user_history.save(); // creates user history
-                            ws.send(JSON.stringify({
+                            send(ws, JSON.stringify({
                                 status: 200,
                                 message: `4 products recommended and user history saved`,
                                 products: rec_products
@@ -101,7 +109,7 @@ function handle_feed(port) {
                             if (rec_products === null) {
                                 // update the index in the products
                                 yield history_1.default.findOneAndUpdate({ user_id: user_id }, user_history);
-                                ws.send(JSON.stringify({
+                                send(ws, JSON.stringify({
                                     status: 500,
                                     message: "Failed to recommend products",
                                 }));
@@ -130,11 +138,16 @@ function handle_feed(port) {
                                 console.log(`OPEN WITH HISTORY : vendor of the first product = ${(_b = products === null || products === void 0 ? void 0 : products[0]) === null || _b === void 0 ? void 0 : _b["vendor"]}`);
                                 // update user history
                                 yield history_1.default.findOneAndUpdate({ user_id: user_id }, user_history);
+                                const products_shortened = [];
+                                for (let i = 0; i < ((products.length < 3) ? products.length : 3); i++) {
+                                    products_shortened.push(products[i]);
+                                }
+                                console.log(`shortened length = ${products_shortened.length}`);
                                 // send all the product data
-                                ws.send(JSON.stringify({
+                                send(ws, JSON.stringify({
                                     status: 200,
                                     message: `2 more products recommended`,
-                                    products: products,
+                                    products: products_shortened,
                                 }));
                                 return;
                             }
@@ -154,7 +167,7 @@ function handle_feed(port) {
                     const user_history = yield history_1.default.findOne({ user_id: user_id });
                     // user has no history which should not be true if connected before
                     if (user_history === null) {
-                        ws.send(JSON.stringify({
+                        send(ws, JSON.stringify({
                             status: 400,
                             message: `No User History found invalid WebSocket Connection`
                         }));
@@ -170,7 +183,7 @@ function handle_feed(port) {
                     if (rec_products === null) {
                         // update the index in the products
                         yield history_1.default.findOneAndUpdate({ user_id: user_id }, user_history);
-                        ws.send(JSON.stringify({
+                        send(ws, JSON.stringify({
                             status: 500,
                             message: "Failed to recommend products",
                         }));
@@ -197,16 +210,21 @@ function handle_feed(port) {
                         console.log(`ACTION : total products length = ${product_ids.length}`);
                         console.log(`ACTION : title of the first product = ${(_c = (products === null || products === void 0 ? void 0 : products[0])) === null || _c === void 0 ? void 0 : _c["title"]}`);
                         console.log(`ACTION : vendor of the first product = ${(_d = products === null || products === void 0 ? void 0 : products[0]) === null || _d === void 0 ? void 0 : _d["vendor"]}`);
-                        ws.send(JSON.stringify({
+                        const products_shortened = [];
+                        for (let i = 0; i < ((products.length < 3) ? products.length : 3); i++) {
+                            products_shortened.push(products[i]);
+                        }
+                        console.log(`shortened length = ${products_shortened.length}`);
+                        send(ws, JSON.stringify({
                             status: 200,
                             message: `2 more products recommended`,
-                            products: products,
+                            products: products_shortened,
                         }));
                         return;
                     }
                 }
                 catch (e) {
-                    ws.send(JSON.stringify({
+                    send(ws, JSON.stringify({
                         status: 500,
                         message: `could not add action, error = ${e}`,
                     }));

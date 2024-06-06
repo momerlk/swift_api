@@ -19,15 +19,23 @@ export async function recommend(n : number){
     }
 }
 
+const send = (ws : any, data : any) => {
+    try { 
+        ws.send(data)
+    } catch (e){
+        console.log(`failed to send data to websocket, err = ${e}`)
+    }
+}
+
 export default async function handle_feed(port : number){
     const app = uws.App().ws('/feed' , {
         /* There are many common helper features */
     idleTimeout: 32,
     maxBackpressure: 1024,
-    maxPayloadLength: 512,
+    maxPayloadLength: 1024,
 
     open : async (ws : uws.WebSocket<unknown>) => {
-        ws.send(JSON.stringify({
+        send(ws,JSON.stringify({
             status : 200,
             message : `Real-time feed connection established`
         }))
@@ -43,7 +51,7 @@ export default async function handle_feed(port : number){
             // TODO : Create a error logger system which logs errors that users face
             jwt.verify(message.token, 'my-secret-key', (err : any, user : any) => {
                 if (err) {
-                    return ws.send(JSON.stringify(({ message: 'Invalid token' })));
+                    return send(ws,JSON.stringify(({ message: 'Invalid token' })));
                 }
                 user_id = user.user_id;
             });
@@ -61,7 +69,7 @@ export default async function handle_feed(port : number){
                     const rec_products = await recommend(4); // cold start
 
                     if(rec_products === null) {
-                        ws.send(JSON.stringify({status : 500, message : `Failed to recommend products`}));
+                        send(ws,JSON.stringify({status : 500, message : `Failed to recommend products`}));
                     }
 
                     let product_ids = [];
@@ -83,7 +91,7 @@ export default async function handle_feed(port : number){
                 
                     await user_history.save(); // creates user history
 
-                    ws.send(JSON.stringify({
+                    send(ws,JSON.stringify({
                         status : 200,
                         message : `4 products recommended and user history saved`,
                         products : rec_products 
@@ -98,7 +106,7 @@ export default async function handle_feed(port : number){
                     if (rec_products === null){
                         // update the index in the products
                         await History.findOneAndUpdate({user_id : user_id} , user_history)
-                        ws.send(JSON.stringify({
+                        send(ws,JSON.stringify({
                             status : 500,
                             message : "Failed to recommend products",
                         }))
@@ -132,12 +140,20 @@ export default async function handle_feed(port : number){
 
                         // update user history
                         await History.findOneAndUpdate({user_id : user_id} , user_history)
+                       
+                        const products_shortened = []
+                        for (let i = 0;i < ((products.length < 3) ? products.length : 3);i++){
+                            products_shortened.push(products[i]);
+                        } 
+
+                        console.log(`shortened length = ${products_shortened.length}`)
+
                         
                         // send all the product data
-                        ws.send(JSON.stringify({
+                        send(ws,JSON.stringify({
                             status : 200,
                             message : `2 more products recommended`,
-                            products : products,
+                            products : products_shortened,
                         }))
                         return;
                     }
@@ -164,7 +180,7 @@ export default async function handle_feed(port : number){
 
             // user has no history which should not be true if connected before
             if (user_history === null){
-                ws.send(JSON.stringify({
+                send(ws,JSON.stringify({
                     status : 400,
                     message : `No User History found invalid WebSocket Connection`
                 }))
@@ -184,7 +200,7 @@ export default async function handle_feed(port : number){
             if (rec_products === null){
                 // update the index in the products
                 await History.findOneAndUpdate({user_id : user_id} , user_history)
-                ws.send(JSON.stringify({
+                send(ws,JSON.stringify({
                     status : 500,
                     message : "Failed to recommend products",
                 }))
@@ -217,17 +233,24 @@ export default async function handle_feed(port : number){
                 console.log(`ACTION : title of the first product = ${(products?.[0])?.["title"]}`)
                 console.log(`ACTION : vendor of the first product = ${products?.[0]?.["vendor"]}`)
 
-                ws.send(JSON.stringify({
+                const products_shortened = []
+                for (let i = 0;i < ((products.length < 3) ? products.length : 3);i++){
+                    products_shortened.push(products[i]);
+                } 
+
+                console.log(`shortened length = ${products_shortened.length}`)
+
+                send(ws,JSON.stringify({
                     status : 200,
                     message : `2 more products recommended`,
-                    products : products,
+                    products : products_shortened,
                 }))
                 return;
             }
 
 
         } catch(e : any){
-            ws.send(JSON.stringify({
+            send(ws,JSON.stringify({
                 status : 500,
                 message : `could not add action, error = ${e}`,
             }))
