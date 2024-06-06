@@ -18,13 +18,12 @@ genai.configure(api_key="AIzaSyD75qFy_cprb1j8W_AxDBzAtsBQnWFH2Vc")
 
 # Create the model with appropriate configurations
 generation_config = {
-    "temperature": 0.9,
+    "temperature": 0.8,
     "top_p": 0.95,
     "top_k": 64,
     "max_output_tokens": 40000,
     "stop_sequences": ["Explanation"],
     "response_mime_type": "text/plain",
-
 }
 
 
@@ -90,13 +89,21 @@ def extract_info(data):
     prompt = generate_prompt(f"{data}")
     for item in data : 
         print(f"handle = {item["handle"]}, vendor = {item["vendor"]}")
+
+    global chat_session
+
     response = None
     retries = 0
     limit = 5
     while True : 
         error = False
         try : 
-            response = chat_session.send_message(prompt)
+            if retries > 0 :
+                chat_session = model.start_chat()
+                print(f"starting new model chat session")
+                response = chat_session.send_message(prompt)
+            else :
+                response = chat_session.send_message(prompt)
         except Exception as e :
             print(f"response error = {e}") 
             error = True
@@ -105,8 +112,9 @@ def extract_info(data):
             break
         else : 
             retries += 1
-            print(f"could not get response trying again after 30 seconds ...")
-            time.sleep(30)
+            print(f"could not get response trying again after 120 seconds ...")
+            time.sleep(120)
+
 
     return response
 
@@ -262,12 +270,20 @@ def main(total_requests):
 
     last_request_time = 0
     requests_in_last_minute = []
+    first_time = True # whether its the first query or not
+    session_requests = 0
+
 
     print(f"total requests = {total_requests}")
 
     # TODO : sometimes a smaller batch size works and doesn't give any errors. Implement functionality
+    # total products = total requests - 10 
     while True:
-        cursor = collection.find(query).sort("_id").skip(total_requests).limit(batch_size)
+        if first_time == False :    
+            cursor = collection.find(query).skip(session_requests).sort("_id").limit(batch_size)
+        else : 
+            first_time = False 
+            cursor = collection.find(query).sort("_id").limit(batch_size)
         products_list = list(cursor)
 
         if not products_list:
@@ -276,6 +292,7 @@ def main(total_requests):
         last_request_time, requests_in_last_minute , total_requests = process_batch(products_list , last_request_time , requests_in_last_minute, total_requests)  
 
         print(f"total requests = {total_requests}")
+        session_requests += batch_size
         # Check if we reached the daily limit
         if len(requests_in_last_minute) >= 1500:
             print("Daily limit reached, stopping execution.")

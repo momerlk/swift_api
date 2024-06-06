@@ -178,6 +178,6 @@ def process_files(directory_path):
 def main():
     process_files(DIRECTORY_PATH)
 
-
+# INCORRECT PRICING IN A LOT OF PRODUCTS THAT DON"T HAVE PRICING ESPECIALLY IN BRIDALWEAR
 if __name__ == '__main__':
     main()

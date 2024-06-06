@@ -39,6 +39,11 @@ router.use(authMiddleware);
 router.get("/verify", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.status(200).json({ message: "Token verified" });
 }));
+router.get("/refresh", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // TODO : Add a secret key that changes every day
+    const token = jsonwebtoken_1.default.sign({ user_id: req === null || req === void 0 ? void 0 : req.user.user_id }, 'my-secret-key', { expiresIn: '3h' });
+    res.status(200).json({ token });
+}));
 router.get("/liked", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {

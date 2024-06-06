@@ -39,6 +39,13 @@ router.get("/verify" , async (req , res) => {
     return res.status(200).json({message : "Token verified"})
 })
 
+router.get("/refresh" , async (req : AuthRequest ,res) => {
+    // TODO : Add a secret key that changes every day
+    const token = jwt.sign({ user_id: req?.user.user_id }, 'my-secret-key', { expiresIn: '3h' });
+
+    res.status(200).json({ token });
+})
+
 router.get("/liked" , async (req : AuthRequest , res) => {
     try {
         const user_id = req.user?.user_id;
