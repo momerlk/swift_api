@@ -3,7 +3,7 @@ import json
 
 # Load JSON data
 user_data = json.load(open('user_data.json'))
-product_data = json.load(open('product_data.json'))
+product_data = json.load(open('products_data.json'))
 
 # Convert to DataFrame
 user_df = pd.DataFrame(user_data)
@@ -23,11 +23,11 @@ product_category = encoder.fit_transform(product_df['category'].values.reshape(-
 scaler = StandardScaler()
 product_price = scaler.fit_transform(product_df['price'].values.reshape(-1, 1))
 
-# Vectorize text features
+# # Vectorize text features
 vectorizer = TfidfVectorizer()
 product_description = vectorizer.fit_transform(product_df['description']).toarray()
 
-# Combine features
+# # Combine features
 user_features = pd.concat([user_df[['user_id']], pd.DataFrame(user_preferences)], axis=1)
 product_features = pd.concat([product_df[['product_id']], pd.DataFrame(product_category), pd.DataFrame(product_price), pd.DataFrame(product_description)], axis=1)
 
