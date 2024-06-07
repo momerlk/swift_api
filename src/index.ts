@@ -13,7 +13,7 @@ app.use(cors())
 
 const atlas_url = "mongodb+srv://swift:swift@hobby.nzyzrid.mongodb.net/swift";
 const local_url = "mongodb://localhost:27017/swift"
-const url = local_url
+const url = atlas_url
 
 // Connect to MongoDB
 mongoose.connect(url)
