@@ -82,4 +82,42 @@ router.get("/liked" , async (req : AuthRequest , res) => {
 })
 
 
+router.get("/cart" , async (req : AuthRequest , res) => {
+    try {
+        const user_id = req.user?.user_id;
+
+        // gets all likes of the user
+        const cart_actions = await actions.find({action_type : "added_to_cart" , user_id : user_id})
+
+
+        // TODO : get all items in cart sorted by the brand
+        let products = []
+        for (let i = 0;i < cart_actions.length;i++){
+            const product_id = cart_actions[i]["product_id"];
+            const data = await product.findOne({product_id : product_id})
+            products.push(data); 
+        }
+
+        const groupedData = products.reduce((acc, curr) => {
+            // Find if the vendor already exists in the accumulator
+            const vendorIndex = acc.findIndex(v => v.vendor === curr!.vendor);
+            
+            if (vendorIndex > -1) {
+                // If vendor exists, push the item to the items array
+                acc[vendorIndex].items.push(curr!);
+            } else {
+                // If vendor does not exist, create a new entry
+                acc.push({ vendor: curr!.vendor, items: [curr!] });
+            }
+
+            return acc;
+        }, [] as any[]);
+
+        
+        return res.status(200).json(groupedData)
+    } catch(e){
+        return res.status(500).json({message : `error = ${e}`})
+    }
+})
+
 export default router;
