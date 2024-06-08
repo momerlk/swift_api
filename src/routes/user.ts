@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from "jsonwebtoken";
 import actions from "../models/actions";
 import product from "../models/product";
+import Product from "../models/product"
 import user from "../models/user"
 
 
@@ -45,6 +46,20 @@ router.get("/refresh" , async (req : AuthRequest ,res) => {
 
     res.status(200).json({ token });
 })
+
+router.get("/products" , async (req , res) => {
+    const n = parseInt(req.query["n"] as string);
+    
+    // TODO : may recommend duplicate products take user history into account
+    try {
+        const products = await Product.aggregate([{ $sample: { size: n } }]);
+        res.status(200).send(JSON.stringify(products))
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).send(JSON.stringify({message : `Error fetching products : ${error}`}))
+    }
+    
+}) 
 
 router.get("/liked" , async (req : AuthRequest , res) => {
     try {
