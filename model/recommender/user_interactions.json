@@ -16,9 +16,11 @@
         "share",
         "Check Website",
         "View Related Products",
-        "Filter_click"
+        "Filter_click",
+        "App Quit" 
     ],
     "num_pics_scrolled": "60%",
+    
     "action_duration": [
         "> 10 seconds",
         "> 25 seconds",
@@ -26,7 +28,14 @@
         "> 60 seconds"
     ],
     "time_spent_compared_to_average": "56%",
-    "action_timestamp": "Fri May 31 2024",
+    "action_timestamp": {
+      "Season": "2",
+      "Month": "1",
+      "Day": "0",
+      "Hours": "2",
+      "Minutes": "200",
+      "TimeZone": "+5"
+    },
     "product_id": "338d0a23-a569-4d0f-87cd-61211b19013f",
     "__v": 0
   }
