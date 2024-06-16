@@ -1,4 +1,3 @@
-
 import json
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -65,7 +64,7 @@ df['num_pics_scrolled'] = df['user1_num_pics_scrolled'].str.replace('%', '').ast
 df['time_spent_compared_to_average'] = df['user1_time_spent_compared_to_average'].str.replace('%', '').astype(float) / 100
 df['num_pics_scrolled'].fillna(0, inplace=True)
 df['time_spent_compared_to_average'].fillna(0, inplace=True)
-df['raw_rating'] = (df['action_type_weighted'] + df['action_duration_weighted'] + df['num_pics_scrolled'] + df['time_spent_compared_to_average']) / 4
+df['raw_rating'] = (df['action_type_weighted'] * df['action_duration_weighted'] * df['num_pics_scrolled'] * df['time_spent_compared_to_average']) / 4
 
 
 scaler = MinMaxScaler()
