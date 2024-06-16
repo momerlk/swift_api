@@ -5,7 +5,7 @@ import json
 user_data = json.load(open('user_data.json'))
 product_data = json.load(open('products_data.json'))
 
-# Convert to DataFrame
+# Convert to DataFramex
 user_df = pd.DataFrame(user_data)
 product_df = pd.DataFrame(product_data)
 
